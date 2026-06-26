@@ -94,10 +94,10 @@
             window.location.href = 'login.html';
         }
 
-        // Initialize Supabase Connection
+        // RECTIFIED: Initializing client with unique object variable instance name
         const SUPABASE_URL = "https://vkdilynwfkkmmmjiyxyw.supabase.co"; 
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZrZGlseW53ZmtrbW1taml5eHl3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0MDA5NDUsImV4cCI6MjA5Nzk3Njk0NX0.AY267mdl4i6fcJuqNx1J3ANs-mNRHcydZvwD75OuAA0";
-        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         document.getElementById('team-display').innerText = `🏴‍☠️ Team: ${teamName}`;
         refreshScore();
@@ -121,8 +121,8 @@
                 if (processingLock) return;
                 processingLock = true;
 
-                // Send the precise tracking data directly to your database function
-                const { data, error } = await supabase.rpc('process_scan', {
+                // RECTIFIED: Calling rpc function execution via updated identifier
+                const { data, error } = await supabaseClient.rpc('process_scan', {
                     p_team_id: teamId,
                     p_marker_id: paddedId,
                     p_marker_type: markerType
@@ -151,7 +151,8 @@
         }
 
         async function refreshScore() {
-            const { data } = await supabase.from('teams').select('score').eq('team_id', teamId).single();
+            // RECTIFIED: Point pull sync script updated with proper variable context
+            const { data } = await supabaseClient.from('teams').select('score').eq('team_id', teamId).single();
             if (data) {
                 document.getElementById('score-display').innerText = `Points: ${data.score}`;
             }
