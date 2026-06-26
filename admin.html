@@ -103,71 +103,53 @@
     </div>
 
     <script>
-        // Supabase configuration
+        // RECTIFIED: Initializing client with unique object variable instance name
         const SUPABASE_URL = "https://vkdilynwfkkmmmjiyxyw.supabase.co"; 
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZrZGlseW53ZmtrbW1taml5eHl3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0MDA5NDUsImV4cCI6MjA5Nzk3Njk0NX0.AY267mdl4i6fcJuqNx1J3ANs-mNRHcydZvwD75OuAA0";
-        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // Run updates every 3 seconds to keep things ultra-lightweight but highly reactive
-        setInterval(updateDashboard, 3000);
-        updateDashboard();
-
-        async function updateDashboard() {
-            // 1. Fetch Leaderboard & Teams Profile
-            const { data: teams, error: tErr } = await supabase
+        // Fetch and display current standings
+        async function fetchLeaderboard() {
+            const { data, error } = await supabaseClient
                 .from('teams')
-                .select('*')
+                .select('team_name, score')
                 .order('score', { ascending: false });
 
-            if (teams) {
-                const tbody = document.getElementById('leaderboard-body');
-                if(teams.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="3">No teams registered yet.</td></tr>`;
-                } else {
-                    tbody.innerHTML = teams.map(team => `
-                        <tr>
-                            <td><span class="status-dot"></span> Active</td>
-                            <td><strong>${team.team_name}</strong></td>
-                            <td><span style="color: #4dff88; font-weight:bold;">${team.score} pts</span></td>
-                        </tr>
-                    `).join('');
-                }
-            }
-
-            // 2. Fetch Recent Live Scan Logs for Feed Display
-            const { data: logs, error: lErr } = await supabase
-                .from('scan_logs')
-                .select('*, teams(team_name)')
-                .order('scanned_at', { ascending: false })
-                .limit(15);
-
-            if (logs) {
-                const logBox = document.getElementById('log-box');
-                logBox.innerHTML = logs.map(log => {
-                    let teamName = log.teams ? log.teams.team_name : 'Unknown Team';
-                    let actionText = log.marker_type === 'waypoint' ? `scanned Waypoint #${log.marker_id}` : 
-                                     log.marker_type === 'piece' ? `CLAIMED Ship Piece #${log.marker_id}!` : 
-                                     `PENALTY! Tried to scan Piece #${log.marker_id} without Waypoint.`;
-                    let color = log.points_awarded > 0 ? '#4dff88' : '#e43f5a';
-                    return `<div class="log-entry"><strong>${teamName}</strong> ${actionText} (<span style="color: ${color}">${log.points_awarded} pts</span>)</div>`;
-                }).join('');
-            }
-        }
-
-        // Master Wipe Button
-        async function resetGame() {
-            if (!confirm("⚠️ WARNING: This will permanently wipe all team scores, delete logs, and reset all 30 markers back to 'open'. Are you sure?")) {
+            if (error) {
+                console.error("Error fetching standings:", error);
                 return;
             }
 
-            // Clean logs, clear active team slots, and reset map locks back to true base values
-            const { error: err1 } = await supabase.from('scan_logs').delete().neq('id', 0);
-            const { error: err2 } = await supabase.from('teams').delete().neq('score', -999);
-            const { error: err3 } = await supabase.from('game_markers').update({ waypoint_status: 'open', piece_status: 'open' }).neq('marker_id', '00');
+            const listContainer = document.getElementById('leaderboard-list');
+            listContainer.innerHTML = "";
 
-            alert("Game Reset Complete! All configurations are restored back to zero.");
-            updateDashboard();
+            data.forEach((team, index) => {
+                const li = document.createElement('li');
+                li.innerHTML = `<span>#${index + 1} ${team.team_name}</span> <strong>${team.score} pts</strong>`;
+                listContainer.appendChild(li);
+            });
         }
+
+        // Global Reset execution
+        async function resetGame() {
+            if (!confirm("⚠️ Are you absolutely sure you want to clear ALL teams and data? This cannot be undone!")) {
+                return;
+            }
+
+            const { error: error1 } = await supabaseClient.from('scans').delete().neq('team_id', 'clear-all');
+            const { error: error2 } = await supabaseClient.from('teams').delete().neq('team_id', 'clear-all');
+
+            if (error1 || error2) {
+                alert("Error resetting database profiles.");
+            } else {
+                alert("🏴‍☠️ Database wiped clean! Game is ready for a fresh run.");
+                fetchLeaderboard();
+            }
+        }
+
+        // Poll every 5 seconds for live event tracking
+        fetchLeaderboard();
+        setInterval(fetchLeaderboard, 5000);
     </script>
 </body>
 </html>
