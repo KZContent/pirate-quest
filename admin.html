@@ -3,86 +3,181 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pirate Quest - Admin Panel</title>
+    <title>Pirate Quest - Master Admin Panel</title>
     
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <style>
-        /* UI HUD Layout */
-        #game-hud {
-            position: fixed;
-            top: 10px; left: 10px; right: 10px;
-            z-index: 9999;
+        body {
             font-family: Arial, sans-serif;
-            pointer-events: none;
+            background-color: #0d1117;
+            color: #ffffff;
+            margin: 0;
+            padding: 20px;
         }
-        .hud-card {
-            background: rgba(22, 36, 71, 0.85);
-            color: #fff;
-            padding: 10px 15px;
-            border-radius: 8px;
-            display: inline-block;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-            font-weight: bold;
-        }
-        #score-display { float: right; background: rgba(228, 63, 90, 0.9); }
 
-        /* Pop-up Modals / Cards styling reverted to match your original theme layout */
-        .modal-content {
-            background-color: #162447;
-            color: white;
-            margin: 15% auto;
-            padding: 25px;
-            border-radius: 12px;
-            width: 80%;
-            max-width: 400px;
+        .header-title {
             text-align: center;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
-            font-family: Arial, sans-serif;
+            color: #e43f5a;
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 30px;
         }
+
+        .admin-container {
+            display: flex;
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+            align-items: flex-start;
+        }
+
+        /* Left Column Panel */
+        .panel-left {
+            flex: 2;
+            background-color: #162447;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            min-height: 500px;
+        }
+
+        /* Right Column Panel */
+        .panel-right {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .card {
+            background-color: #162447;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+
+        .panel-title {
+            font-size: 20px;
+            font-weight: bold;
+            margin-top: 0;
+            margin-bottom: 20px;
+        }
+        
+        .title-green { color: #28a745; }
+        .title-blue { color: #00d2fc; }
+        .title-yellow { color: #ffc107; }
+
+        /* Leaderboard Table Elements */
+        .leaderboard-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+        
+        .leaderboard-table th {
+            color: #a2a8d3;
+            padding: 12px;
+            border-bottom: 2px solid #1f4068;
+            font-size: 16px;
+        }
+
+        .leaderboard-table td {
+            padding: 14px 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 16px;
+        }
+
+        .empty-row {
+            text-align: center;
+            color: #8b949e;
+            padding: 40px !important;
+        }
+
+        /* Control UI Elements */
+        .control-desc {
+            color: #8b949e;
+            font-size: 14px;
+            line-height: 1.5;
+            margin-bottom: 20px;
+        }
+
         .modal-btn {
             background: #e43f5a;
             color: white;
             border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
+            padding: 12px 20px;
+            border-radius: 6px;
             font-size: 16px;
-            cursor: pointer;
-            margin-top: 15px;
-            width: 100%;
             font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
         }
+
         .modal-btn:hover {
             background: #b93246;
         }
-        ul {
-            list-style: none;
-            padding: 0;
-            text-align: left;
-            margin: 20px 0;
-        }
-        li {
-            background: rgba(228, 63, 90, 0.2);
-            padding: 12px;
-            margin: 8px 0;
-            border-radius: 6px;
-            display: flex;
-            justify-content: space-between;
-            border: 1px solid rgba(228, 63, 90, 0.4);
+
+        /* Console Feed Element */
+        .feed-box {
+            background-color: #0d1117;
+            border-radius: 8px;
+            padding: 15px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 13px;
+            color: #a2a8d3;
+            height: 250px;
+            overflow-y: auto;
+            border: 1px solid #1f4068;
         }
     </style>
 </head>
-<body style="background-color: #0f172a; margin: 0; padding: 20px;">
+<body>
 
-    <div class="modal-content" style="margin-top: 50px;">
-        <h2 id="modalTitle" style="color: #e43f5a;">☠️ Admin Command Deck </h2>
-        <p id="modalMessage">Live Leaderboard Standings:</p>
+    <div class="header-title">☠️ Pirate Quest - Master Control Deck ☠️</div>
+
+    <div class="admin-container">
         
-        <ul id="leaderboard-list">
-            <li>Loading standings...</li>
-        </ul>
+        <div class="panel-left">
+            <div class="panel-title title-green">Leaderboard (Real-time Scores & Pieces)</div>
+            <table class="leaderboard-table">
+                <thead>
+                    <tr>
+                        <th style="width: 20%;">Status</th>
+                        <th style="width: 50%;">Team Name</th>
+                        <th style="width: 30%;">Score</th>
+                    </tr>
+                </thead>
+                <tbody id="leaderboard-rows">
+                    <tr>
+                        <td colspan="3" class="empty-row">Waiting for teams to join...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
 
-        <button class="modal-btn" onclick="resetEntireGame()">Reset Entire Game</button>
+        <div class="panel-right">
+            
+            <div class="card">
+                <div class="panel-title title-blue">Game Controls</div>
+                <div class="control-desc">
+                    Use this button at the end of a round to wipe scores and open all markers up again.
+                </div>
+                <button class="modal-btn" onclick="resetEntireGame()">🔄 Reset Entire Game</button>
+            </div>
+
+            <div class="card">
+                <div class="panel-title title-yellow">Live Activity Feed</div>
+                <div id="activity-log" class="feed-box">[System]: Awaiting connection...</div>
+            </div>
+
+        </div>
+
     </div>
 
     <script>
@@ -90,9 +185,10 @@
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZrZGlseW53ZmtrbW1taml5eHl3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0MDA5NDUsImV4cCI6MjA5Nzk3Njk0NX0.AY267mdl4i6fcJuqNx1J3ANs-mNRHcydZvwD75OuAA0";
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+        // Fetch standings and update table rows dynamically
         async function fetchLeaderboard() {
-            const listContainer = document.getElementById('leaderboard-list');
-            if (!listContainer) return;
+            const rowContainer = document.getElementById('leaderboard-rows');
+            if (!rowContainer) return;
 
             const { data, error } = await supabaseClient
                 .from('teams')
@@ -104,28 +200,37 @@
                 return;
             }
 
-            listContainer.innerHTML = "";
-
             if (data.length === 0) {
-                listContainer.innerHTML = "<li style='justify-content: center;'>No active pirate crews found.</li>";
+                rowContainer.innerHTML = `<tr><td colspan="3" class="empty-row">Waiting for teams to join...</td></tr>`;
                 return;
             }
 
+            rowContainer.innerHTML = "";
             data.forEach((team, index) => {
-                const li = document.createElement('li');
-                li.innerHTML = `<span>#${index + 1} ${team.team_name}</span> <strong>${team.score} pts</strong>`;
-                listContainer.appendChild(li);
+                const tr = document.createElement('tr');
+                
+                // Set custom status icons depending on leaderboard rankings
+                let rankingStatus = "🏴‍☠️ Crew";
+                if (index === 0) rankingStatus = "🥇 Captain";
+                else if (index === 1) rankingStatus = "🥈 Quartermaster";
+
+                tr.innerHTML = `
+                    <td style="font-weight: bold; color: #ffc107;">${rankingStatus}</td>
+                    <td style="font-weight: bold;">${team.team_name}</td>
+                    <td style="font-weight: bold; color: #28a745;">${team.score} pts</td>
+                `;
+                rowContainer.appendChild(tr);
             });
         }
 
-        // FIXED: Deletes child records from scan_logs before clearing teams
+        // Clean dependent scan records first, then clear teams
         async function resetEntireGame() {
             if (!confirm("⚠️ Are you absolutely sure you want to wipe the game? This will instantly boot all logged-in devices back to registration and erase points!")) {
                 return;
             }
 
             try {
-                // Step 1: Wipe the dependent scan logs first to clear constraints
+                // Step 1: Wipe scan logs to clear constraints
                 const { error: logsError } = await supabaseClient
                     .from('scan_logs')
                     .delete()
@@ -133,13 +238,18 @@
 
                 if (logsError) throw logsError;
 
-                // Step 2: Now we can safely wipe the teams without a 409 conflict
+                // Step 2: Clear out the team profiles
                 const { error: teamError } = await supabaseClient
                     .from('teams')
                     .delete()
                     .neq('team_id', '_none_');
 
                 if (teamError) throw teamError;
+
+                // Document operation in the console log layout
+                const logBox = document.getElementById('activity-log');
+                logBox.innerHTML += `<br>[${new Date().toLocaleTimeString()}]: System Reset Performed.`;
+                logBox.scrollTop = logBox.scrollHeight;
 
                 alert("🏴‍☠️ Database wiped clean successfully! Devices will auto-reset within 10 seconds.");
                 fetchLeaderboard();
@@ -150,6 +260,7 @@
             }
         }
 
+        // Run checking loops
         fetchLeaderboard();
         setInterval(fetchLeaderboard, 5000);
     </script>
