@@ -61,11 +61,10 @@
     </div>
 
     <script>
-        // Replace these with YOUR actual Supabase credentials you copied earlier!
         const SUPABASE_URL = "https://vkdilynwfkkmmmjiyxyw.supabase.co"; 
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZrZGlseW53ZmtrbW1taml5eHl3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0MDA5NDUsImV4cCI6MjA5Nzk3Njk0NX0.AY267mdl4i6fcJuqNx1J3ANs-mNRHcydZvwD75OuAA0";
 
-        // FIX: Renamed local instance to prevent conflict with global library name
+        // RECTIFIED: Changed instance name from 'supabase' to 'supabaseClient' to eliminate declaration conflicts
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         async function registerTeam() {
@@ -81,7 +80,7 @@
             // Generate a simple clean ID from the team name (lowercase, no spaces)
             const teamId = teamName.toLowerCase().replace(/[^a-z0-9]/g, '-');
 
-            // FIX: Uses the updated supabaseClient identifier
+            // RECTIFIED: Using the updated instance identifier securely
             const { data, error } = await supabaseClient
                 .from('teams')
                 .insert([{ team_id: teamId, team_name: teamName }])
