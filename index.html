@@ -20,7 +20,7 @@
             background: transparent;
         }
 
-        /* FIX: Forces the web viewfinder video feed and tracking layers to expand to full screen */
+        /* Forces the web viewfinder video feed and tracking layers to expand to full screen */
         video, canvas, .a-canvas, .a-video, a-scene, .mindar-ui-overlay {
             position: fixed !important;
             top: 0 !important;
@@ -147,14 +147,14 @@
         let processingLock = false;
         const container = document.getElementById('target-container');
 
-        // Dynamically instantiate 60 MindAR targets mapped to their tracking index IDs
-        for (let i = 0; i < 60; i++) {
+        // FIXED: Instantiating exactly 8 targets mapped to your Option A compiler layout
+        for (let i = 0; i < 8; i++) {
             let entity = document.createElement('a-entity');
             entity.setAttribute('mindar-image-target', `targetIndex: ${i}`);
             
-            // Map the sequential compiler numbers back to game data values
-            let isWaypoint = i < 30;
-            let targetMarkerNumber = isWaypoint ? (i + 1) : (i - 29);
+            // Map the tracking indexes based on the 4-and-4 Option A upload sequence
+            let isWaypoint = i < 4; 
+            let targetMarkerNumber = isWaypoint ? (i + 1) : (i - 3);
             let paddedId = targetMarkerNumber.toString().padStart(2, '0');
             let markerType = isWaypoint ? 'waypoint' : 'piece';
 
