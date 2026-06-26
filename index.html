@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Pirate Quest - MindAR Scanner</title>
     
     <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
@@ -10,11 +10,32 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+            background: transparent;
+        }
+
+        /* FIX: Forces the web viewfinder video feed and tracking layers to expand to full screen */
+        video, canvas, .a-canvas, .a-video, a-scene, .mindar-ui-overlay {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            object-fit: cover !important;
+            z-index: 1 !important;
+        }
+
         /* UI HUD Layout */
         #game-hud {
             position: fixed;
             top: 10px; left: 10px; right: 10px;
-            z-index: 9999;
+            z-index: 9999 !important;
             font-family: Arial, sans-serif;
             pointer-events: none;
         }
@@ -26,6 +47,7 @@
             display: inline-block;
             box-shadow: 0 4px 10px rgba(0,0,0,0.3);
             font-weight: bold;
+            pointer-events: auto;
         }
         #score-display { float: right; background: rgba(228, 63, 90, 0.9); }
 
@@ -96,17 +118,31 @@
     <script>
         const teamId = localStorage.getItem('team_id');
         const teamName = localStorage.getItem('team_name');
+        
+        // Immediate baseline authentication check
         if (!teamId || !teamName) {
             window.location.href = 'login.html';
         }
 
-        // Supabase Initialization Context
+        // Initialize Supabase Connection Context
         const SUPABASE_URL = "https://vkdilynwfkkmmmjiyxyw.supabase.co"; 
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZrZGlseW53ZmtrbW1taml5eHl3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0MDA5NDUsImV4cCI6MjA5Nzk3Njk0NX0.AY267mdl4i6fcJuqNx1J3ANs-mNRHcydZvwD75OuAA0";
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         document.getElementById('team-display').innerText = `🏴‍☠️ Team: ${teamName}`;
         refreshScore();
+
+        // LIVE SYSTEM VALIDATION: Kicks device out back to login if admin wipes data tables
+        async function verifyTeamStillExists() {
+            const { data } = await supabaseClient.from('teams').select('team_id').eq('team_id', teamId).maybeSingle();
+            if (!data) {
+                localStorage.clear();
+                window.location.href = 'login.html';
+            }
+        }
+        // Run validation on launch and repeat loop checks every 10 seconds
+        verifyTeamStillExists();
+        setInterval(verifyTeamStillExists, 10000);
 
         let processingLock = false;
         const container = document.getElementById('target-container');
@@ -127,7 +163,7 @@
                 if (processingLock) return;
                 processingLock = true;
 
-                // Submit execution payload straight through the global client
+                // Send tracking coordinates to database engine logic
                 const { data, error } = await supabaseClient.rpc('process_scan', {
                     p_team_id: teamId,
                     p_marker_id: paddedId,
