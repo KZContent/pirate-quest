@@ -4,23 +4,57 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pirate Quest - Admin Panel</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
     <style>
-        body {
-            font-family: 'Segoe UI', Arial, sans-serif;
-            background: #1a1a2e;
+        /* UI HUD Layout */
+        #game-hud {
+            position: fixed;
+            top: 10px; left: 10px; right: 10px;
+            z-index: 9999;
+            font-family: Arial, sans-serif;
+            pointer-events: none;
+        }
+        .hud-card {
+            background: rgba(22, 36, 71, 0.85);
             color: #fff;
-            padding: 20px;
+            padding: 10px 15px;
+            border-radius: 8px;
+            display: inline-block;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            font-weight: bold;
+        }
+        #score-display { float: right; background: rgba(228, 63, 90, 0.9); }
+
+        /* Pop-up Modals / Cards styling reverted to match your original theme layout */
+        .modal-content {
+            background-color: #162447;
+            color: white;
+            margin: 15% auto;
+            padding: 25px;
+            border-radius: 12px;
+            width: 80%;
+            max-width: 400px;
             text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            font-family: Arial, sans-serif;
         }
-        .admin-card {
-            background: #162447;
-            padding: 30px;
-            border-radius: 15px;
-            max-width: 500px;
-            margin: 40px auto;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+        .modal-btn {
+            background: #e43f5a;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 15px;
+            width: 100%;
+            font-weight: bold;
         }
-        h1 { color: #e43f5a; }
+        .modal-btn:hover {
+            background: #b93246;
+        }
         ul {
             list-style: none;
             padding: 0;
@@ -28,40 +62,27 @@
             margin: 20px 0;
         }
         li {
-            background: #1f4068;
+            background: rgba(228, 63, 90, 0.2);
             padding: 12px;
             margin: 8px 0;
             border-radius: 6px;
             display: flex;
             justify-content: space-between;
+            border: 1px solid rgba(228, 63, 90, 0.4);
         }
-        .btn-reset {
-            background: #e43f5a;
-            color: white;
-            border: none;
-            padding: 12px 25px;
-            border-radius: 8px;
-            font-weight: bold;
-            cursor: pointer;
-            width: 100%;
-            font-size: 16px;
-            margin-top: 20px;
-        }
-        .btn-reset:hover { background: #b93246; }
     </style>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body>
+<body style="background-color: #0f172a; margin: 0; padding: 20px;">
 
-    <div class="admin-card">
-        <h1>☠️ Game Master Command Deck ☠️</h1>
-        <p>Live Leaderboard Standings:</p>
+    <div class="modal-content" style="margin-top: 50px;">
+        <h2 id="modalTitle" style="color: #e43f5a;">☠️ Admin Command Deck </h2>
+        <p id="modalMessage">Live Leaderboard Standings:</p>
         
         <ul id="leaderboard-list">
             <li>Loading standings...</li>
         </ul>
 
-        <button class="btn-reset" onclick="resetEntireGame()">Reset Entire Game & De-auth All Devices</button>
+        <button class="modal-btn" onclick="resetEntireGame()">Reset Entire Game</button>
     </div>
 
     <script>
@@ -97,15 +118,22 @@
             });
         }
 
-        // FIXED: Complete database wipe + user device kick logic
+        // FIXED: Deletes child records from scan_logs before clearing teams
         async function resetEntireGame() {
             if (!confirm("⚠️ Are you absolutely sure you want to wipe the game? This will instantly boot all logged-in devices back to registration and erase points!")) {
                 return;
             }
 
             try {
-                // 1. Clear out the team tracks completely using a universal RPC reset fallback or direct filter 
-                // Using .neq('team_id', '_none_') ensures we clear everything safely without running into URL formatting bugs
+                // Step 1: Wipe the dependent scan logs first to clear constraints
+                const { error: logsError } = await supabaseClient
+                    .from('scan_logs')
+                    .delete()
+                    .neq('team_id', '_none_');
+
+                if (logsError) throw logsError;
+
+                // Step 2: Now we can safely wipe the teams without a 409 conflict
                 const { error: teamError } = await supabaseClient
                     .from('teams')
                     .delete()
@@ -113,7 +141,7 @@
 
                 if (teamError) throw teamError;
 
-                alert("🏴‍☠️ Database wiped clean! Devices will clear automatically on their next database check loop.");
+                alert("🏴‍☠️ Database wiped clean successfully! Devices will auto-reset within 10 seconds.");
                 fetchLeaderboard();
 
             } catch (err) {
