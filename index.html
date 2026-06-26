@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pirate Quest - MindAR Scanner</title>
+    
+    <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar-js@1.1.5/dist/mindar-image-aframe.prod.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        /* UI HUD Layout */
+        #game-hud {
+            position: fixed;
+            top: 10px; left: 10px; right: 10px;
+            z-index: 9999;
+            font-family: Arial, sans-serif;
+            pointer-events: none;
+        }
+        .hud-card {
+            background: rgba(22, 36, 71, 0.85);
+            color: #fff;
+            padding: 10px 15px;
+            border-radius: 8px;
+            display: inline-block;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            font-weight: bold;
+        }
+        #score-display { float: right; background: rgba(228, 63, 90, 0.9); }
+
+        /* Pop-up Modals */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 10000;
+            left: 0; top: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.8);
+            font-family: Arial, sans-serif;
+        }
+        .modal-content {
+            background-color: #162447;
+            color: white;
+            margin: 15% auto;
+            padding: 25px;
+            border-radius: 12px;
+            width: 80%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+        }
+        .modal-btn {
+            background: #e43f5a;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 15px;
+        }
+        .hint-img { max-width: 100%; border-radius: 8px; margin-top: 10px; }
+        .error-text { color: #ff4d4d; }
+        .success-text { color: #4dff88; }
+    </style>
+</head>
+<body style="margin: 0px; overflow: hidden;">
+
+    <div id="game-hud">
+        <div class="hud-card" id="team-display">🏴‍☠️ Team: Loading...</div>
+        <div class="hud-card" id="score-display">Points: 0</div>
+    </div>
+
+    <div id="resultModal" class="modal">
+        <div class="modal-content">
+            <h2 id="modalTitle">Scan Status</h2>
+            <p id="modalMessage">Processing scan details...</p>
+            <div id="modalAttachment"></div>
+            <button class="modal-btn" onclick="closeModal()">Continue Quest</button>
+        </div>
+    </div>
+
+    <a-scene mindar-image="imageTargetSrc: targets.mind; autoStart: true; maxTrack: 1;" embedded vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
+        
+        <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+        <a-entity id="target-container"></a-entity>
+    </a-scene>
+
+    <script>
+        const teamId = localStorage.getItem('team_id');
+        const teamName = localStorage.getItem('team_name');
+        if (!teamId || !teamName) {
+            window.location.href = 'login.html';
+        }
+
+        // Initialize Supabase Connection
+        const SUPABASE_URL = "https://vkdilynwfkkmmmjiyxyw.supabase.co"; 
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZrZGlseW53ZmtrbW1taml5eHl3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0MDA5NDUsImV4cCI6MjA5Nzk3Njk0NX0.AY267mdl4i6fcJuqNx1J3ANs-mNRHcydZvwD75OuAA0";
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        document.getElementById('team-display').innerText = `🏴‍☠️ Team: ${teamName}`;
+        refreshScore();
+
+        let processingLock = false;
+        const container = document.getElementById('target-container');
+
+        // Dynamically instantiate 60 MindAR targets mapped to their tracking index IDs
+        for (let i = 0; i < 60; i++) {
+            let entity = document.createElement('a-entity');
+            entity.setAttribute('mindar-image-target', `targetIndex: ${i}`);
+            
+            // Map the sequential compiler numbers back to game data values
+            let isWaypoint = i < 30;
+            let targetMarkerNumber = isWaypoint ? (i + 1) : (i - 29);
+            let paddedId = targetMarkerNumber.toString().padStart(2, '0');
+            let markerType = isWaypoint ? 'waypoint' : 'piece';
+
+            // Add scanning event listeners directly to the target frame detection pipeline
+            entity.addEventListener('targetFound', async () => {
+                if (processingLock) return;
+                processingLock = true;
+
+                // Send the precise tracking data directly to your database function
+                const { data, error } = await supabase.rpc('process_scan', {
+                    p_team_id: teamId,
+                    p_marker_id: paddedId,
+                    p_marker_type: markerType
+                });
+
+                if (error) {
+                    showModal("System Error", "Could not submit scan data.", false);
+                    processingLock = false;
+                } else if (data && data.length > 0) {
+                    const result = data[0];
+                    
+                    if (result.success) {
+                        if (markerType === 'waypoint') {
+                            showModal("🎯 Waypoint Found!", result.message, true, result.hint_or_piece_name);
+                        } else {
+                            showModal("⚔️ Piece Claimed!", result.message, true);
+                        }
+                    } else {
+                        showModal("❌ Action Denied", result.message, false);
+                    }
+                    refreshScore();
+                }
+            });
+
+            container.appendChild(entity);
+        }
+
+        async function refreshScore() {
+            const { data } = await supabase.from('teams').select('score').eq('team_id', teamId).single();
+            if (data) {
+                document.getElementById('score-display').innerText = `Points: ${data.score}`;
+            }
+        }
+
+        function showModal(title, message, isSuccess, secondaryData = '') {
+            document.getElementById('modalTitle').innerText = title;
+            document.getElementById('modalTitle').className = isSuccess ? "success-text" : "error-text";
+            document.getElementById('modalMessage').innerText = message;
+            
+            const attachment = document.getElementById('modalAttachment');
+            attachment.innerHTML = "";
+
+            if (secondaryData && secondaryData.startsWith('http')) {
+                let img = document.createElement('img');
+                img.src = secondaryData;
+                img.className = 'hint-img';
+                attachment.appendChild(img);
+            }
+
+            document.getElementById('resultModal').style.display = "block";
+        }
+
+        function closeModal() {
+            document.getElementById('resultModal').style.display = "none";
+            setTimeout(() => { processingLock = false; }, 2500);
+        }
+    </script>
+</body>
+</html>

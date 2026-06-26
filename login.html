@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pirate Quest - Team Registration</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a2e;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .login-card {
+            background: #162447;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+            text-align: center;
+            width: 80%;
+            max-width: 350px;
+        }
+        h1 { color: #e43f5a; margin-bottom: 20px; }
+        input {
+            width: 90%;
+            padding: 12px;
+            margin: 15px 0;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+        button {
+            background: #e43f5a;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            width: 100%;
+            font-weight: bold;
+        }
+        button:hover { background: #b93246; }
+        .error { color: #ff4d4d; margin-top: 10px; font-size: 14px; }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+    <div class="login-card">
+        <h1>🏴‍☠️ Pirate AR Quest 🏴‍☠️</h1>
+        <p>Enter your Team Name to join the hunt!</p>
+        <input type="text" id="teamNameInput" placeholder="e.g. Black Pearls" required>
+        <button onclick="registerTeam()">Join Game</button>
+        <div id="errorMessage" class="error"></div>
+    </div>
+
+    <script>
+        // Replace these with YOUR actual Supabase credentials you copied earlier!
+        const SUPABASE_URL = "https://vkdilynwfkkmmmjiyxyw.supabase.co"; 
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZrZGlseW53ZmtrbW1taml5eHl3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0MDA5NDUsImV4cCI6MjA5Nzk3Njk0NX0.AY267mdl4i6fcJuqNx1J3ANs-mNRHcydZvwD75OuAA0";
+
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        async function registerTeam() {
+            const teamName = document.getElementById('teamNameInput').value.trim();
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.innerText = "";
+
+            if (!teamName) {
+                errorDiv.innerText = "Please enter a valid name!";
+                return;
+            }
+
+            // Generate a simple clean ID from the team name (lowercase, no spaces)
+            const teamId = teamName.toLowerCase().replace(/[^a-z0-9]/g, '-');
+
+            // Insert team into the database
+            const { data, error } = await supabase
+                .from('teams')
+                .insert([{ team_id: teamId, team_name: teamName }])
+                .select();
+
+            if (error) {
+                // If team name already exists, we let them log back in as that team
+                if (error.code === '23505') { 
+                    localStorage.setItem('team_id', teamId);
+                    localStorage.setItem('team_name', teamName);
+                    window.location.href = 'index.html';
+                } else {
+                    errorDiv.innerText = "Error: " + error.message;
+                }
+            } else {
+                // Success! Save data locally on the phone browser and go to the camera scanner
+                localStorage.setItem('team_id', teamId);
+                localStorage.setItem('team_name', teamName);
+                window.location.href = 'index.html';
+            }
+        }
+
+        // Quick check: If they are already logged in, skip directly to the game
+        if (localStorage.getItem('team_id')) {
+            window.location.href = 'index.html';
+        }
+    </script>
+</body>
+</html>
