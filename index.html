@@ -5,9 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pirate Quest - MindAR Scanner</title>
     
-    <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/mind-ar-js@1.1.5/dist/mindar-image-prod.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/mind-ar-js@1.1.5/dist/mindar-image-aframe-prod.js"></script>
+    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <style>
@@ -81,7 +80,13 @@
         </div>
     </div>
 
-    <a-scene mindar-image="imageTargetSrc: ./targets.mind; autoStart: true; maxTrack: 1;" embedded vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
+    <a-scene 
+        mindar-image="imageTargetSrc: ./targets.mind; autoStart: true; maxTrack: 1; uiScanning: no; uiLoading: no; uiError: no;" 
+        embedded 
+        renderer="alpha: true; antialias: true;"
+        color-space="sRGB"
+        vr-mode-ui="enabled: false" 
+        device-orientation-permission-ui="enabled: false">
         
         <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
@@ -95,7 +100,7 @@
             window.location.href = 'login.html';
         }
 
-        // RECTIFIED: Initializing client with unique object variable instance name
+        // Supabase Initialization Context
         const SUPABASE_URL = "https://vkdilynwfkkmmmjiyxyw.supabase.co"; 
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZrZGlseW53ZmtrbW1taml5eHl3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0MDA5NDUsImV4cCI6MjA5Nzk3Njk0NX0.AY267mdl4i6fcJuqNx1J3ANs-mNRHcydZvwD75OuAA0";
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -122,7 +127,7 @@
                 if (processingLock) return;
                 processingLock = true;
 
-                // RECTIFIED: Calling rpc function execution via updated identifier
+                // Submit execution payload straight through the global client
                 const { data, error } = await supabaseClient.rpc('process_scan', {
                     p_team_id: teamId,
                     p_marker_id: paddedId,
@@ -152,7 +157,6 @@
         }
 
         async function refreshScore() {
-            // RECTIFIED: Point pull sync script updated with proper variable context
             const { data } = await supabaseClient.from('teams').select('score').eq('team_id', teamId).single();
             if (data) {
                 document.getElementById('score-display').innerText = `Points: ${data.score}`;
