@@ -134,6 +134,7 @@
             height: 250px;
             overflow-y: auto;
             border: 1px solid #1f4068;
+            line-height: 1.6;
         }
     </style>
 </head>
@@ -185,7 +186,7 @@
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZrZGlseW53ZmtrbW1taml5eHl3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0MDA5NDUsImV4cCI6MjA5Nzk3Njk0NX0.AY267mdl4i6fcJuqNx1J3ANs-mNRHcydZvwD75OuAA0";
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // Fetch standings and update table rows dynamically
+        // Update table rows dynamically
         async function fetchLeaderboard() {
             const rowContainer = document.getElementById('leaderboard-rows');
             if (!rowContainer) return;
@@ -209,7 +210,6 @@
             data.forEach((team, index) => {
                 const tr = document.createElement('tr');
                 
-                // Set custom status icons depending on leaderboard rankings
                 let rankingStatus = "🏴‍☠️ Crew";
                 if (index === 0) rankingStatus = "🥇 Captain";
                 else if (index === 1) rankingStatus = "🥈 Quartermaster";
@@ -223,7 +223,42 @@
             });
         }
 
-        // Clean dependent scan records first, then clear teams
+        // Helper function to push incoming events directly into the UI log view window
+        function logActivity(message) {
+            const logBox = document.getElementById('activity-log');
+            if (!logBox) return;
+            const timestamp = new Date().toLocaleTimeString();
+            logBox.innerHTML += `<br>[${timestamp}]: ${message}`;
+            logBox.scrollTop = logBox.scrollHeight;
+        }
+
+        // Live Realtime listener loop setup
+        function initRealtimeFeed() {
+            supabaseClient
+                .channel('live-scans')
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'scan_logs' }, async (payload) => {
+                    const newLog = payload.new;
+                    
+                    // Fetch the team name associated with the tracking event ID
+                    const { data } = await supabaseClient.from('teams').select('team_name').eq('team_id', newLog.team_id).maybeSingle();
+                    const name = data ? data.team_name : newLog.team_id;
+                    
+                    // Route text format outputs based on incoming tracking classification
+                    if (newLog.marker_type === 'waypoint') {
+                        logActivity(`🎯 Team "${name}" discovered Waypoint ${newLog.marker_id}`);
+                    } else if (newLog.marker_type === 'piece_penalty') {
+                        logActivity(`⚠️ Team "${name}" hit with a PENALTY on Piece ${newLog.marker_id}!`);
+                    } else {
+                        logActivity(`⚔️ Team "${name}" claimed Quest Piece ${newLog.marker_id}!`);
+                    }
+                    
+                    // Automatically sync scores onto the left grid instantly
+                    fetchLeaderboard();
+                })
+                .subscribe();
+        }
+
+        // Clear all session states completely on reset
         async function resetEntireGame() {
             if (!confirm("⚠️ Are you absolutely sure you want to wipe the game? This will instantly boot all logged-in devices back to registration and erase points!")) {
                 return;
@@ -246,12 +281,15 @@
 
                 if (teamError) throw teamError;
 
-                // Document operation in the console log layout
-                const logBox = document.getElementById('activity-log');
-                logBox.innerHTML += `<br>[${new Date().toLocaleTimeString()}]: System Reset Performed.`;
-                logBox.scrollTop = logBox.scrollHeight;
+                // Step 3: Re-open all marker game states inside table
+                const { error: markerError } = await supabaseClient
+                    .from('game_markers')
+                    .update({ waypoint_status: 'open', piece_status: 'open' })
+                    .neq('marker_id', '_none_');
 
-                alert("🏴‍☠️ Database wiped clean successfully! Devices will auto-reset within 10 seconds.");
+                if (markerError) throw markerError;
+
+                logActivity("System Reset Performed.");
                 fetchLeaderboard();
 
             } catch (err) {
@@ -260,9 +298,9 @@
             }
         }
 
-        // Run checking loops
+        // Initialize view operations
         fetchLeaderboard();
-        setInterval(fetchLeaderboard, 5000);
+        initRealtimeFeed();
     </script>
 </body>
 </html>
