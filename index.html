@@ -89,7 +89,7 @@
 <body style="margin: 0px; overflow: hidden;">
 
     <div id="game-hud">
-        <div class="hud-card" id="team-display">🏴‍☠️ Team: Loading...</div>
+        <div class="hud-card" id="team-display">⚓ Team: Loading...</div>
         <div class="hud-card" id="score-display">Points: 0</div>
     </div>
 
@@ -129,7 +129,7 @@
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZrZGlseW53ZmtrbW1taml5eHl3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0MDA5NDUsImV4cCI6MjA5Nzk3Njk0NX0.AY267mdl4i6fcJuqNx1J3ANs-mNRHcydZvwD75OuAA0";
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        document.getElementById('team-display').innerText = `🏴‍☠️ Team: ${teamName}`;
+        document.getElementById('team-display').innerText = `⚓ Team: ${teamName}`;
         refreshScore();
 
         // LIVE SYSTEM VALIDATION: Kicks device out back to login if admin wipes data tables
